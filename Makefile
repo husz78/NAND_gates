@@ -18,13 +18,10 @@ testy: testy.o libnand.so
 	$(CC) -L. -g -o $@ $< -lnand
 
 nand.o: nand.h structs.h
-	gcc -c -g nand.c -o nand.o
 structs.o: structs.h
-	gcc -c -g structs.c -o structs.o
 memory_tests.o: memory_tests.h
 nand_example.o: memory_tests.h nand.h
 testy.o: nand.h
-	gcc -c -g testy.c -o testy.o
 
 clean:
 	rm -f *.o *.so ./main ./testy
