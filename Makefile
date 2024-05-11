@@ -6,7 +6,7 @@ CC = gcc
 
 .PHONY: all clean 
 
-all: $(OBJ) libnand.so main testy
+all: $(OBJ) libnand.so main
 
 libnand.so: $(OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(OBJ)
