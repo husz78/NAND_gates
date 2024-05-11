@@ -13,7 +13,6 @@ void delete_kth_entry_signal(unsigned k, nand_t* g) {
     if (entry == NULL)return;
     if (g->entry_type[k]) { // jesli k-te wyjscie jest podlaczone pod nand_t
         nand_t *nand_entry = (nand_t *)entry;
-        //if (nand_entry == g)return;
         // usuwamy bramke g z wyjsc bramki nand_entry
         del_node(&(nand_entry->exits), g); 
     }
@@ -78,19 +77,20 @@ void nand_delete(nand_t *g) {
     // odlaczamy sygnaly wejsciowe
     for (unsigned i = 0; i < g->n_of_entries; i++)
         delete_kth_entry_signal(i, g);
+    
+    // odlaczamy sygnaly wyjsciowe
     list tmp = g->exits;
     while (tmp != NULL && tmp->gate != NULL) {
         unsigned entry_num = entry_number(g, tmp->gate);
         tmp->gate->entries[entry_num] = NULL;
         tmp = tmp->next;
     }
-    del_list(&(g->exits)); // odlaczamy sygnaly wyjsciowe
-    // sprawdzic czy g->exits = NULL
+    del_list(&(g->exits)); 
+    
+    //zwalniamy pamiec
     free(g->entry_type);
-    g->entry_type = NULL;
     free(g->entries);
     free(g);
-    g = NULL;
 }
 
 int nand_connect_nand(nand_t *g_out, nand_t *g_in, unsigned k) {
@@ -170,7 +170,7 @@ nand_t* nand_output(nand_t const *g, ssize_t k) {
     if (g == NULL || k >= nand_fan_out(g)) { // jesli ktorys z parametrow jest niepoprawny
         errno = EINVAL;
         return NULL;
-    } // co oznacza nieokreslonosc wyniku tutaj??
+    }
     list tmp = g->exits;
     while (k > 0) {
         tmp = tmp->next;
@@ -213,7 +213,7 @@ bool eval_gate(nand_t* g, ssize_t* path_len) {
         g->path_len = -1;
         return false;
     }
-    if (g->n_of_entries == 0) {
+    if (g->n_of_entries == 0) { // gdy bramka ma zero wejsc
         g->signal = false;
         g->path_len = 0;
         *path_len = 0;
@@ -239,7 +239,6 @@ bool eval_gate(nand_t* g, ssize_t* path_len) {
         if (g->entry_type[i]) { 
             eval = eval_gate((nand_t*)g->entries[i], path_len);
             if (*path_len == -1) {
-                // errno = ECANCELED;
                 g->path_len = -1;
                 return false;
             }
@@ -280,12 +279,9 @@ ssize_t nand_evaluate(nand_t **g, bool *s, size_t m) {
     // przechodzimy po tablicy bramek i obliczamy dlugosc
     // sciezki ukladu bramek i wypelniamy tablice s
     for (size_t i = 0; i < m; i++) { 
-        // if (g[i] == NULL) {
-        //     errno = EINVAL;
-        //     return -1;
-        // }
         s[i] = eval_gate(g[i], &tmp_path);
         if (g[i]->path_len == -1) {
+            unprocess_gates(g, m);
             errno = ECANCELED;
             return -1;
         }
