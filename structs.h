@@ -3,10 +3,6 @@
 
 #include "nand.h"
 
-// typedef struct node {
-//     nand_t *gate;
-//     struct node *next, *prev;
-// }node;
 typedef struct node {
     nand_t *gate;
     struct node *next;
