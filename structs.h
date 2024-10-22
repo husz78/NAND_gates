@@ -6,36 +6,36 @@
 typedef struct node {
     nand_t *gate;
     struct node *next;
-}node;
+} node;
 typedef struct node* list;
 
 typedef enum Process {pre, in, post} Process;
 struct nand {
-    unsigned n_of_entries; // liczba wejsc bramki
-    // tablica wskaznikow do bramek podlaczonych do wejscia bramki
+    unsigned n_of_entries; // number of gate inputs
+    // array of pointers to gates connected to the gate's input
     void **entries;
     
-    // tablica, na i-tym miejscu ma 0 gdy pod i-te wejscie jest podlaczony
-    // sygnal boolowski, a 1 gdy pod i-te wejscie jest podlaczona bramka nand
+    // array, where at the i-th position there is a 0 if a boolean signal
+    // is connected to the i-th input, and 1 if a nand gate is connected to the i-th input
     bool *entry_type; 
-    bool signal; // wartosc sygnalu bramki
-    Process process; // oznacza w jakim stadium obliczania sciezki krytycznej
-    // sie znajduje bramka: pre - przed obliczeniem,
-    //  in - w trakcie, post - po obliczeniu
+    bool signal; // value of the gate's signal
+    Process process; // indicates the stage of critical path computation
+    // the gate is in: pre - before computation,
+    // in - during, post - after computation
 
-    ssize_t path_len ; // dlugosc sciezki krytycznej danej bramki
-    list exits; // lista wskaznikow do 
-    // bramek podlaczonych do wyjscia bramki
+    ssize_t path_len; // length of the gate's critical path
+    list exits; // list of pointers to
+    // gates connected to the output of this gate
 };
 
-// tworzy element listy który zawiera 
-// wskaznik na gate, zwraca wskaznik do tego node'a lub NULL
+// creates a list node that contains
+// a pointer to gate, returns a pointer to this node or NULL
 list create_node(nand_t *gate); 
 
-void list_push(list head, list item); // wstawia item do listy head
-void del_node(list *head, nand_t* g); // usuwa bramke g z listy head
+void list_push(list head, list item); // inserts item into the head list
+void del_node(list *head, nand_t* g); // removes gate g from the head list
 
-// usuwa cala liste, gdzie head to wskaznik na pierwszy element
+// removes the entire list, where head is a pointer to the first element
 void del_list(list *head); 
 
-#endif 
+#endif
