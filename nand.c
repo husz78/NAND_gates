@@ -7,20 +7,20 @@
 
 #define MAX(x, y) (x < y ? y : x)
 
-// odlacza sygnal z k-tego wejscia bramki g
+// disconnects the signal from the k-th input of gate g
 void delete_kth_entry_signal(unsigned k, nand_t* g) { 
     void *entry = g->entries[k];
-    if (entry == NULL)return;
-    if (g->entry_type[k]) { // jesli k-te wyjscie jest podlaczone pod nand_t
+    if (entry == NULL) return;
+    if (g->entry_type[k]) { // if the k-th input is connected to a nand_t
         nand_t *nand_entry = (nand_t *)entry;
-        // usuwamy bramke g z wyjsc bramki nand_entry
+        // remove gate g from the outputs of nand_entry
         del_node(&(nand_entry->exits), g); 
     }
-    g->entries[k] = NULL; // trzeba sie nad tym zastanowic
+    g->entries[k] = NULL; // needs further consideration
     g->entry_type[k] = 0;
 }
 
-// zwraca numer wejscia bramki g_out, do ktorego jest podlaczona bramka g_in
+// returns the input number of gate g_out that is connected to gate g_in
 unsigned entry_number(nand_t *g_in, nand_t *g_out) {
     for (unsigned i = 0; i < g_out->n_of_entries; i++) {
         if (g_out->entries[i] != NULL) {
@@ -42,30 +42,29 @@ nand_t* nand_new(unsigned n) {
         New_nand->exits = NULL;
         New_nand->entries = (void **)malloc(sizeof(void *) * n);
         New_nand->entry_type = (bool*)malloc(sizeof(bool) * n);
-        // Bledy alokowania
+        // Allocation errors
         if (New_nand->entries == NULL && New_nand->entry_type == NULL) {
             errno = ENOMEM;
             free(New_nand);
             return NULL;
         }
-        // Bledy alokowania
-        else if (New_nand->entries == NULL && New_nand->entry_type){
+        // Allocation errors
+        else if (New_nand->entries == NULL && New_nand->entry_type) {
             errno = ENOMEM;
             free(New_nand->entry_type);
             free(New_nand);
             return NULL;
         }
-        // Bledy alokowania
+        // Allocation errors
         else if (New_nand->entries && New_nand->entry_type == NULL) { 
             errno = ENOMEM;
             free(New_nand->entries);
             free(New_nand);
             return NULL;
         }
-        // zadne wejscie nie jest podlaczone pod nic. Dlatego NULL
-        for (unsigned i = 0; i < n; i++)New_nand->entries[i] = NULL;
-    }
-    else  { // Blad alokowania
+        // no input is connected to anything, hence NULL
+        for (unsigned i = 0; i < n; i++) New_nand->entries[i] = NULL;
+    } else { // Allocation error
         errno = ENOMEM;
         return NULL;
     }
@@ -73,12 +72,12 @@ nand_t* nand_new(unsigned n) {
 }
 
 void nand_delete(nand_t *g) {
-    if (g == NULL)return;
-    // odlaczamy sygnaly wejsciowe
+    if (g == NULL) return;
+    // disconnect input signals
     for (unsigned i = 0; i < g->n_of_entries; i++)
         delete_kth_entry_signal(i, g);
     
-    // odlaczamy sygnaly wyjsciowe
+    // disconnect output signals
     list tmp = g->exits;
     while (tmp != NULL && tmp->gate != NULL) {
         unsigned entry_num = entry_number(g, tmp->gate);
@@ -87,28 +86,28 @@ void nand_delete(nand_t *g) {
     }
     del_list(&(g->exits)); 
     
-    //zwalniamy pamiec
+    // free memory
     free(g->entry_type);
     free(g->entries);
     free(g);
 }
 
 int nand_connect_nand(nand_t *g_out, nand_t *g_in, unsigned k) {
-    // jesli ktorys parametr jest niepoprawny
+    // if any parameter is invalid
     if (g_out == NULL || g_in == NULL || k >= g_in->n_of_entries) {
         errno = EINVAL;
         return -1;
     }
-    if (g_out->exits == NULL) { // jesli wyjscie to pusta lista
+    if (g_out->exits == NULL) { // if output is an empty list
         g_out->exits = create_node(g_in);
         if (g_out->exits == NULL) {
             errno = ENOMEM;
             return -1;
         }
     }
-    else { // jesli juz cos jest podlaczone do wyjscia g_out
+    else { // if something is already connected to the output of g_out
         list new_list = create_node(g_in);
-        if (new_list == NULL) { // jesli wystapil blad alokowania pamieci
+        if (new_list == NULL) { // if memory allocation failed
             errno = ENOMEM;
             return -1;
         }
@@ -123,7 +122,7 @@ int nand_connect_nand(nand_t *g_out, nand_t *g_in, unsigned k) {
 }
 
 int nand_connect_signal(bool const *s, nand_t *g, unsigned k) {
-    // jesli ktorys parametr jest niepoprawny
+    // if any parameter is invalid
     if (s == NULL || g == NULL || k >= g->n_of_entries) {
         errno = EINVAL;
         return -1;
@@ -140,8 +139,8 @@ ssize_t nand_fan_out(nand_t const *g) {
         return -1;
     }
     ssize_t counter = 1;
-    if (g->exits == NULL)return 0;
-    if (g->exits->gate == NULL)return 0;
+    if (g->exits == NULL) return 0;
+    if (g->exits->gate == NULL) return 0;
     list tmp = g->exits;
     while (tmp->next != NULL) {
         counter++;
@@ -151,13 +150,13 @@ ssize_t nand_fan_out(nand_t const *g) {
 }
 
 void* nand_input(nand_t const *g, unsigned k) {
-    // jesli ktorys z parametrow jest niepoprawny
+    // if any of the parameters is invalid
     if (g == NULL || k >= g->n_of_entries) { 
         errno = EINVAL;
         return NULL;
     }
 
-    if (g->entries[k] == NULL) {// jesli nic nie jest podlaczone do wejscia k
+    if (g->entries[k] == NULL) { // if nothing is connected to input k
         errno = 0;
         return NULL;
     }
@@ -167,7 +166,7 @@ void* nand_input(nand_t const *g, unsigned k) {
 }
 
 nand_t* nand_output(nand_t const *g, ssize_t k) {
-    if (g == NULL || k >= nand_fan_out(g)) { // jesli ktorys z parametrow jest niepoprawny
+    if (g == NULL || k >= nand_fan_out(g)) { // if any of the parameters is invalid
         errno = EINVAL;
         return NULL;
     }
@@ -179,41 +178,41 @@ nand_t* nand_output(nand_t const *g, ssize_t k) {
     return tmp->gate;
 }
 
-// ustawia process bramki g jak i wszystkie poprzedzajace ja bramki na pre
+// sets the process of gate g and all preceding gates to pre
 void unprocess_gate(nand_t* g) {
-    if (g == NULL)return;
-    if (g->process == pre)return;
+    if (g == NULL) return;
+    if (g->process == pre) return;
     g->process = pre;
     g->signal = false;
     g->path_len = 0;
     for (unsigned i = 0; i < g->n_of_entries; i++)
-        // jesli wejscie istnieje i jest podlaczone pod bramke nand
+        // if the input exists and is connected to a nand gate
         if (g->entries[i] != NULL && g->entry_type[i])
             unprocess_gate((nand_t*)g->entries[i]);
 }
 
-// ustawia process wszystkich bramek w tablicy gates,
-// jak i wszystkich poprzedzajacych bramek na pre 
+// sets the process of all gates in the array gates,
+// and all preceding gates, to pre
 void unprocess_gates(nand_t **gates, size_t m) { 
     for (size_t i = 0; i < m; i++) unprocess_gate(gates[i]);
 }
 
-// zwraca obliczony sygnal bramki g i ustawia path_len 
-// na dlugosc sciezki krytycznej bramki g
+// returns the computed signal of gate g and sets path_len
+// to the critical path length of gate g
 bool eval_gate(nand_t* g, ssize_t* path_len) { 
-    if (*path_len == -1)return false;
-    if (g->process == post) { // jesli bramka zostala juz policzona
+    if (*path_len == -1) return false;
+    if (g->process == post) { // if the gate has already been evaluated
         *path_len = g->path_len;
         return g->signal;
     }
-    // jesli bramka juz byla w trakcie liczenia to mamy cykl
+    // if the gate is already being evaluated, we have a cycle
     if (g->process == in) { 
         errno = ECANCELED;
         *path_len = -1;
         g->path_len = -1;
         return false;
     }
-    if (g->n_of_entries == 0) { // gdy bramka ma zero wejsc
+    if (g->n_of_entries == 0) { // when the gate has no inputs
         g->signal = false;
         g->path_len = 0;
         *path_len = 0;
@@ -222,20 +221,20 @@ bool eval_gate(nand_t* g, ssize_t* path_len) {
     }
     g->process = in;
 
-    // maksimum dlugosci sciezek krytycznych ze wszystkich wejsc
+    // maximum critical path length from all inputs
     ssize_t max_path = 0; 
-    bool eval = false; // wynik funkcji eval_gate dla bramek z wejscia
+    bool eval = false; // result of eval_gate for the input gates
     g->signal = false;
 
-    // iterujemy sie po wejsciach bramki g
+    // iterate over the inputs of gate g
     for (unsigned i = 0; i < g->n_of_entries; i++) { 
-        // jesli nic nie jest podlaczone pod i-te wejscie
+        // if nothing is connected to the i-th input
         if (g->entries[i] == NULL) { 
             *path_len = -1;
             g->path_len = -1;
             return false;
         }
-        // jesli pod i-te wejscie jest podlaczona bramka nand
+        // if the i-th input is connected to a nand gate
         if (g->entry_type[i]) { 
             eval = eval_gate((nand_t*)g->entries[i], path_len);
             if (*path_len == -1) {
@@ -247,14 +246,13 @@ bool eval_gate(nand_t* g, ssize_t* path_len) {
                 max_path = MAX(max_path, *path_len);
             }
         }
-        else { // jesli pod i-te wejscie jest podlaczony sygnal boolowski   
-            
+        else { // if the i-th input is connected to a boolean signal
             bool *tmp = (bool *)g->entries[i];
             if (!(*tmp)) g->signal = true;
             *path_len = 0;
         }
     }
-    max_path++; // dodajemy jeden do dlugosci sciezki zgodnie ze wzorem
+    max_path++; // increment the path length according to the formula
     *path_len = max_path;
     g->path_len = max_path;
     g->process = post;
@@ -262,7 +260,7 @@ bool eval_gate(nand_t* g, ssize_t* path_len) {
 }
 
 ssize_t nand_evaluate(nand_t **g, bool *s, size_t m) {
-    if (m == 0 || g == NULL || s == NULL){
+    if (m == 0 || g == NULL || s == NULL) {
         errno = EINVAL;
         return -1;
     }
@@ -273,11 +271,11 @@ ssize_t nand_evaluate(nand_t **g, bool *s, size_t m) {
         }
     unprocess_gates(g, m);
     ssize_t max_path = 0;
-    // tmp_path bedzie ustawiane na dlugosci sciezek poszczegolnych bramek
+    // tmp_path will store the lengths of individual gate paths
     ssize_t tmp_path = 0;
 
-    // przechodzimy po tablicy bramek i obliczamy dlugosc
-    // sciezki ukladu bramek i wypelniamy tablice s
+    // iterate over the array of gates, compute the path length
+    // of the gate system, and fill the array s
     for (size_t i = 0; i < m; i++) { 
         s[i] = eval_gate(g[i], &tmp_path);
         if (g[i]->path_len == -1) {
